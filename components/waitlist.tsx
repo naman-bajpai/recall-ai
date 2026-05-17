@@ -1,29 +1,101 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 
-export default function Waitlist() {
-  const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">(
-    "idle"
-  );
+// ─── Update this constant to change the webhook endpoint ──────────────────────
+const WEBHOOK_URL =
+  "https://script.google.com/macros/s/AKfycbyxuWxWeaaXQPNzqBByPpDTheRpKAhd05Tro3Hgw56hLEKrnH6k-mu6VjXh-12VSM7N/exec";
 
-  const handleSubmit = async (e: React.FormEvent) => {
+interface UTMParams {
+  utm_source: string;
+  utm_medium: string;
+  utm_campaign: string;
+  utm_content: string;
+}
+
+function useUTMParams(): UTMParams {
+  const [utms, setUtms] = useState<UTMParams>({
+    utm_source: "",
+    utm_medium: "",
+    utm_campaign: "",
+    utm_content: "",
+  });
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setUtms({
+      utm_source: params.get("utm_source") ?? "",
+      utm_medium: params.get("utm_medium") ?? "",
+      utm_campaign: params.get("utm_campaign") ?? "",
+      utm_content: params.get("utm_content") ?? "",
+    });
+  }, []);
+
+  return utms;
+}
+
+export default function Waitlist() {
+  const router = useRouter();
+  const utms = useUTMParams();
+
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [role, setRole] = useState("");
+  const [intent, setIntent] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
+
+  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!email.trim()) return;
     setStatus("loading");
 
-    // Replace with your actual waitlist endpoint (Mailchimp, Loops, etc.)
-    await new Promise((r) => setTimeout(r, 1000));
-    setStatus("done");
+    const payload = {
+      candidate_id: "recall",
+      product_name: "Recall",
+      product_slug: "recall",
+      subdomain: "https://recall.remyndai.com",
+      lead_name: name,
+      lead_email: email,
+      lead_company_role: role,
+      company_school: "",
+      source: utms.utm_source || "direct",
+      channel: utms.utm_medium || "organic",
+      campaign: utms.utm_campaign || "phase2",
+      utm_source: utms.utm_source,
+      utm_medium: utms.utm_medium,
+      utm_campaign: utms.utm_campaign,
+      utm_content: utms.utm_content,
+      referrer: typeof document !== "undefined" ? document.referrer : "",
+      landing_page_url:
+        typeof window !== "undefined" ? window.location.href : "",
+      confirmation_page_url: "https://recall.remyndai.com/thank-you",
+      intent_signal: intent,
+      notes_from_lead: intent,
+      custom_question: "What would you use Recall for?",
+      custom_answer: intent,
+      consent_captured: "Yes",
+    };
+
+    try {
+      await fetch(WEBHOOK_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify(payload),
+      });
+      router.push("/thank-you");
+    } catch {
+      setStatus("error");
+    }
   };
 
   return (
     <section id="waitlist" className="py-24 md:py-32 border-t border-border">
       <div className="max-w-6xl mx-auto px-6">
         <motion.div
-          className="max-w-2xl mx-auto text-center"
+          className="max-w-xl mx-auto text-center"
           initial={{ opacity: 0, y: 22 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.3 }}
@@ -33,49 +105,112 @@ export default function Waitlist() {
             Early access
           </p>
           <h2 className="font-caveat text-5xl md:text-6xl text-foreground leading-tight mb-4">
-            Get early access.
+            Join early access.
           </h2>
           <p className="text-base text-muted-foreground leading-relaxed mb-10 max-w-md mx-auto">
-            Recall is in private beta. Join the waitlist and we&apos;ll let you
-            know when your spot opens up. Mac only. No credit card needed.
+            Recall is in early testing. Reserve your spot and we&apos;ll let you
+            know when you&apos;re in. No credit card needed.
           </p>
 
-          {status === "done" ? (
-            <div className="inline-flex flex-col items-center gap-3 p-8 rounded-2xl border border-accent/30 bg-accent/5">
-              <span className="text-3xl">✓</span>
-              <p className="font-caveat text-2xl text-foreground">
-                You&apos;re on the list.
-              </p>
-              <p className="font-mono text-xs text-muted-foreground">
-                We&apos;ll reach out when your spot opens up.
-              </p>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+          <form
+            onSubmit={handleSubmit}
+            className="flex flex-col gap-3 text-left"
+          >
+            {/* Email — required */}
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="wl-email"
+                className="font-mono text-xs text-muted-foreground"
+              >
+                Email <span className="text-accent">*</span>
+              </label>
               <input
+                id="wl-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 required
                 aria-label="Email address"
-                className="flex-1 px-4 py-3 rounded-xl border border-border bg-card font-mono text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 transition-shadow"
+                className="px-4 py-3 rounded-xl border border-border bg-card font-mono text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 transition-shadow"
               />
-              <button
-                type="submit"
-                disabled={status === "loading"}
-                className="px-6 py-3 rounded-xl bg-foreground text-background font-mono text-sm hover:opacity-80 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-              >
-                {status === "loading" ? "Joining..." : "Join waitlist →"}
-              </button>
-            </form>
-          )}
+            </div>
 
-          {status === "error" && (
-            <p className="font-mono text-xs text-destructive mt-3">
-              Something went wrong. Try again?
-            </p>
-          )}
+            {/* Name — optional */}
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="wl-name"
+                className="font-mono text-xs text-muted-foreground"
+              >
+                Name{" "}
+                <span className="opacity-50 font-normal">(optional)</span>
+              </label>
+              <input
+                id="wl-name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Alex"
+                aria-label="Your name"
+                className="px-4 py-3 rounded-xl border border-border bg-card font-mono text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 transition-shadow"
+              />
+            </div>
+
+            {/* Role — optional */}
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="wl-role"
+                className="font-mono text-xs text-muted-foreground"
+              >
+                Role / context{" "}
+                <span className="opacity-50 font-normal">(optional)</span>
+              </label>
+              <input
+                id="wl-role"
+                type="text"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                placeholder="Founder, student, PM…"
+                aria-label="Your role or context"
+                className="px-4 py-3 rounded-xl border border-border bg-card font-mono text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 transition-shadow"
+              />
+            </div>
+
+            {/* Intent — optional */}
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="wl-intent"
+                className="font-mono text-xs text-muted-foreground"
+              >
+                What would you use Recall for?{" "}
+                <span className="opacity-50 font-normal">(optional)</span>
+              </label>
+              <textarea
+                id="wl-intent"
+                value={intent}
+                onChange={(e) => setIntent(e.target.value)}
+                placeholder="e.g. Tracking follow-ups after sales calls, finding links people shared with me…"
+                aria-label="What would you use Recall for?"
+                rows={3}
+                className="px-4 py-3 rounded-xl border border-border bg-card font-mono text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 transition-shadow resize-none"
+              />
+            </div>
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={status === "loading"}
+              className="mt-2 w-full px-6 py-3.5 rounded-xl bg-foreground text-background font-mono text-sm font-medium hover:opacity-80 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {status === "loading" ? "Submitting…" : "Join early access →"}
+            </button>
+
+            {status === "error" && (
+              <p className="font-mono text-xs text-destructive text-center mt-1">
+                Something went wrong. Please try again.
+              </p>
+            )}
+          </form>
 
           <p className="font-mono text-xs text-muted-foreground mt-6">
             No spam. No data sharing. Unsubscribe any time.

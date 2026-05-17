@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { Caveat, JetBrains_Mono, Montserrat } from "next/font/google";
+import Script from "next/script";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
+
+const GA_ID = "G-WXVVB2ETRN";
 
 const caveat = Caveat({
   variable: "--font-caveat",
@@ -54,8 +57,9 @@ export default function RootLayout({
       lang="en"
       className={`${caveat.variable} ${montserrat.variable} ${jetbrainsMono.variable} dark h-full`}
       suppressHydrationWarning
+      data-scroll-behavior="smooth"
     >
-      <body className="min-h-full flex flex-col antialiased">
+      <body className="relative min-h-full flex flex-col antialiased">
         <ThemeProvider
           attribute="class"
           forcedTheme="dark"
@@ -65,6 +69,19 @@ export default function RootLayout({
         >
           {children}
         </ThemeProvider>
+        {/* GA4 */}
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script id="ga4-init" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GA_ID}');
+          `}
+        </Script>
       </body>
     </html>
   );
