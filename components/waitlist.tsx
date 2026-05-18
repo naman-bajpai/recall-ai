@@ -91,8 +91,8 @@ export default function Waitlist() {
             Join early access.
           </h2>
           <p className="text-base text-muted-foreground leading-relaxed mb-10 max-w-md mx-auto">
-            Recall is in early testing. Reserve your spot and we&apos;ll let you
-            know when you&apos;re in. No credit card needed.
+            We are looking for early interest and we&apos;ll contact you once
+            we start our testing.
           </p>
 
           <form

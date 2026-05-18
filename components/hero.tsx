@@ -171,45 +171,45 @@ function SpotlightSearch() {
         )}
       </div>
 
-      {/* Results */}
-      <div
-        className={`transition-all duration-300 ease-out ${
-          showResults ? "opacity-100" : "opacity-0"
-        }`}
-      >
-        {/* Category label */}
-        <div className="px-5 pt-3 pb-1.5">
-          <span
-            className="font-mono text-[10px] text-white/35 tracking-[0.18em] uppercase"
-          >
-            Top Hits
-          </span>
-        </div>
-
-        {/* Result rows */}
-        {current.results.map((result, i) => (
-          <div
-            key={`${queryIndex}-${i}`}
-            className="flex items-center gap-3 mx-2 mb-0.5 px-3 py-2.5 rounded-xl hover:bg-white/[0.10] cursor-default transition-colors"
-          >
-            <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-lg shrink-0">
-              {result.icon}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-mono text-[10px] text-white/38 mb-0.5">
-                {result.source}
-              </div>
-              <div className="text-[13px] text-white/88 truncate">
-                {result.title}
-              </div>
-            </div>
-            <span className="font-mono text-[10px] text-white/28 shrink-0">
-              {result.time}
+      {/* Results — fixed height so CTAs below never shift */}
+      <div className="overflow-hidden" style={{ height: "216px" }}>
+        <div
+          className={`transition-opacity duration-300 ease-out ${
+            showResults ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          {/* Category label */}
+          <div className="px-5 pt-3 pb-1.5">
+            <span className="font-mono text-[10px] text-white/35 tracking-[0.18em] uppercase">
+              Top Hits
             </span>
           </div>
-        ))}
 
-        <div className="h-2.5" />
+          {/* Result rows */}
+          {current.results.map((result, i) => (
+            <div
+              key={`${queryIndex}-${i}`}
+              className="flex items-center gap-3 mx-2 mb-0.5 px-3 py-2.5 rounded-xl hover:bg-white/[0.10] cursor-default transition-colors"
+            >
+              <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-lg shrink-0">
+                {result.icon}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-mono text-[10px] text-white/38 mb-0.5">
+                  {result.source}
+                </div>
+                <div className="text-[13px] text-white/88 truncate">
+                  {result.title}
+                </div>
+              </div>
+              <span className="font-mono text-[10px] text-white/28 shrink-0">
+                {result.time}
+              </span>
+            </div>
+          ))}
+
+          <div className="h-2.5" />
+        </div>
       </div>
     </div>
   );
@@ -313,24 +313,38 @@ const SIGMA        = 82;   // px — spread of magnification
 
 function MacDock() {
   const iconRefs   = useRef<(HTMLDivElement | null)[]>([]);
+  const centersRef = useRef<number[]>([]);
+  const rafRef     = useRef<number | null>(null);
   const [tooltip, setTooltip] = useState<string | null>(null);
 
-  const applyScales = useCallback((mouseX: number | null) => {
-    iconRefs.current.forEach((el) => {
-      if (!el) return;
-      if (mouseX === null) {
-        el.style.transform = "translateY(0px) scale(1)";
-        return;
-      }
-      const rect   = el.getBoundingClientRect();
-      const center = rect.left + rect.width / 2;
-      const d      = Math.abs(mouseX - center);
-      const scale  = 1 + (MAX_SCALE - 1) * Math.exp(-(d * d) / (2 * SIGMA * SIGMA));
-      const lift = Math.max(0, (scale - 1) / (MAX_SCALE - 1)) * 7;
-      el.style.transform = `translateY(-${lift.toFixed(2)}px) scale(${scale.toFixed(4)})`;
+  /* Cache rest positions on mouse enter — before any magnification disturbs layout */
+  const cacheCenters = useCallback(() => {
+    centersRef.current = iconRefs.current.map((el) => {
+      if (!el) return 0;
+      const r = el.getBoundingClientRect();
+      return r.left + r.width / 2;
     });
   }, []);
 
+  const applyScales = useCallback((mouseX: number | null) => {
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() => {
+      iconRefs.current.forEach((el, i) => {
+        if (!el) return;
+        if (mouseX === null) {
+          el.style.transform = "translateY(0px) scale(1)";
+          return;
+        }
+        const center = centersRef.current[i] ?? 0;
+        const d      = Math.abs(mouseX - center);
+        const scale  = 1 + (MAX_SCALE - 1) * Math.exp(-(d * d) / (2 * SIGMA * SIGMA));
+        const lift   = ((scale - 1) / (MAX_SCALE - 1)) * 8;
+        el.style.transform = `translateY(-${lift.toFixed(1)}px) scale(${scale.toFixed(3)})`;
+      });
+    });
+  }, []);
+
+  const handleMouseEnter = useCallback(() => cacheCenters(), [cacheCenters]);
   const handleMouseMove  = useCallback((e: React.MouseEvent) => applyScales(e.clientX), [applyScales]);
   const handleMouseLeave = useCallback(() => { applyScales(null); setTooltip(null); }, [applyScales]);
 
@@ -356,6 +370,7 @@ function MacDock() {
             "inset 0 -1px 0 rgba(255,255,255,0.08)",
           ].join(", "),
         }}
+        onMouseEnter={handleMouseEnter}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
@@ -417,7 +432,7 @@ function MacDock() {
                 className="cursor-pointer"
                 style={{
                   transformOrigin: "bottom center",
-                  transition:      "transform 0.22s cubic-bezier(0.22, 1, 0.36, 1)",
+                  transition:      "transform 0.14s cubic-bezier(0.34, 1.56, 0.64, 1)",
                   willChange:      "transform",
                 }}
               >
@@ -454,7 +469,7 @@ export default function Hero() {
       <MacMenuBar />
 
       {/* Center content */}
-      <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-5 pt-7 pb-28 px-4">
+      <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 sm:gap-5 pt-7 pb-6 sm:pb-28 px-4">
         {/* Eyebrow */}
         <motion.div
           className="flex items-center gap-2"
@@ -464,10 +479,6 @@ export default function Hero() {
         >
           <span className="font-mono text-[10px] text-white/50 tracking-[0.2em] uppercase">
             Recall for Mac
-          </span>
-          <span className="w-1 h-1 rounded-full bg-white/25" />
-          <span className="font-mono text-[10px] text-white/50 tracking-[0.2em] uppercase">
-            Private Beta
           </span>
         </motion.div>
 

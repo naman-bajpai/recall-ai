@@ -116,14 +116,20 @@ export default function RadialOrbitalTimeline({
   useEffect(() => {
     if (!autoRotate) return;
 
-    const controls = animate(orbitRotation, orbitRotation.get() + 360, {
-      duration: 26,
-      ease: "linear",
-      repeat: Infinity,
-      repeatType: "loop",
-    });
+    const DEGREES_PER_MS = 360 / 26_000;
+    let lastTime: number | null = null;
+    let rafId: number;
 
-    return () => controls.stop();
+    const frame = (timestamp: number) => {
+      if (lastTime !== null) {
+        orbitRotation.set(orbitRotation.get() + DEGREES_PER_MS * (timestamp - lastTime));
+      }
+      lastTime = timestamp;
+      rafId = requestAnimationFrame(frame);
+    };
+
+    rafId = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(rafId);
   }, [autoRotate, orbitRotation]);
 
   const calculateNodePosition = (index: number, total: number) => {
@@ -170,8 +176,8 @@ export default function RadialOrbitalTimeline({
           className="absolute w-full h-full flex items-center justify-center z-20"
           ref={orbitRef}
           style={{
-            perspective: "1000px",
             rotate: orbitRotation,
+            willChange: "transform",
           }}
         >
           {/* Orbit ring */}
@@ -216,10 +222,10 @@ export default function RadialOrbitalTimeline({
                   {/* Icon button */}
                   <div
                     className={`
-                      w-14 h-14 rounded-full flex items-center justify-center border-2 transition-all duration-300
-                      ${isExpanded  ? "bg-white text-black border-white shadow-lg shadow-white/30 scale-125"
-                      : isRelated   ? "bg-white/50 text-black border-white animate-pulse"
-                                    : "bg-black text-white border-white/40"}
+                      w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300
+                      ${isExpanded  ? "bg-white text-black shadow-lg shadow-white/30 scale-125"
+                      : isRelated   ? "bg-white/50 text-black animate-pulse"
+                                    : "bg-black/70 text-white"}
                     `}
                   >
                     <Icon size={22} />
@@ -242,9 +248,7 @@ export default function RadialOrbitalTimeline({
                       <CardHeader className="pb-2">
                         <div className="flex justify-between items-center">
                           <Badge className={`px-2 text-xs ${getStatusStyles(item.status)}`}>
-                            {item.status === "completed" ? "LIVE"
-                              : item.status === "in-progress" ? "BETA"
-                              : "COMING SOON"}
+                            {"PLANNED"}
                           </Badge>
                           <span className="text-xs font-mono text-white/50">{item.date}</span>
                         </div>
