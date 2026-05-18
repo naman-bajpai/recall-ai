@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { Caveat, JetBrains_Mono, Montserrat } from "next/font/google";
 import Script from "next/script";
+import UtmCapture from "@/components/utm-capture";
+import { GA_MEASUREMENT_ID, SNAPCHAT_PIXEL_ID } from "@/lib/analytics";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
-
-const GA_ID = "G-WXVVB2ETRN";
 
 const caveat = Caveat({
   variable: "--font-caveat",
@@ -67,11 +67,12 @@ export default function RootLayout({
           enableSystem={false}
           disableTransitionOnChange
         >
+          <UtmCapture />
           {children}
         </ThemeProvider>
-        {/* GA4 */}
+        {/* GA4 — landing + thank-you (root layout) */}
         <Script
-          src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
           strategy="afterInteractive"
         />
         <Script id="ga4-init" strategy="afterInteractive">
@@ -79,9 +80,22 @@ export default function RootLayout({
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
-            gtag('config', '${GA_ID}');
+            gtag('config', '${GA_MEASUREMENT_ID}');
           `}
         </Script>
+        {SNAPCHAT_PIXEL_ID ? (
+          <Script id="snapchat-pixel" strategy="afterInteractive">
+            {`
+              (function(e,t,n){if(e.snaptr)return;var a=e.snaptr=function(){
+              a.handleRequest?a.handleRequest.apply(a,arguments):a.queue.push(arguments)};
+              a.queue=[];var s='script';var r=t.createElement(s);r.async=!0;
+              r.src=n;var u=t.getElementsByTagName(s)[0];u.parentNode.insertBefore(r,u);
+              })(window,document,'https://sc-static.net/scevent.min.js');
+              snaptr('init', '${SNAPCHAT_PIXEL_ID}');
+              snaptr('track', 'PAGE_VIEW');
+            `}
+          </Script>
+        ) : null}
       </body>
     </html>
   );

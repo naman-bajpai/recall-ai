@@ -3,34 +3,17 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { EMPTY_UTMS, getEffectiveUTMs, type UTMParams } from "@/lib/utm";
 
-// ─── Update this constant to change the webhook endpoint ──────────────────────
 const WEBHOOK_URL =
+  process.env.NEXT_PUBLIC_WEBHOOK_URL ??
   "https://script.google.com/macros/s/AKfycbyxuWxWeaaXQPNzqBByPpDTheRpKAhd05Tro3Hgw56hLEKrnH6k-mu6VjXh-12VSM7N/exec";
 
-interface UTMParams {
-  utm_source: string;
-  utm_medium: string;
-  utm_campaign: string;
-  utm_content: string;
-}
-
 function useUTMParams(): UTMParams {
-  const [utms, setUtms] = useState<UTMParams>({
-    utm_source: "",
-    utm_medium: "",
-    utm_campaign: "",
-    utm_content: "",
-  });
+  const [utms, setUtms] = useState<UTMParams>(EMPTY_UTMS);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setUtms({
-      utm_source: params.get("utm_source") ?? "",
-      utm_medium: params.get("utm_medium") ?? "",
-      utm_campaign: params.get("utm_campaign") ?? "",
-      utm_content: params.get("utm_content") ?? "",
-    });
+    setUtms(getEffectiveUTMs());
   }, []);
 
   return utms;

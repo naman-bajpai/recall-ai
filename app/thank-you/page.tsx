@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import ThankYouTracking from "@/components/thank-you-tracking";
 
 export const metadata: Metadata = {
   title: "You're in — Recall Early Access",
@@ -9,6 +10,7 @@ export const metadata: Metadata = {
 export default function ThankYouPage() {
   return (
     <main className="min-h-dvh flex flex-col items-center justify-center px-6 bg-background">
+      <ThankYouTracking />
       {/* Subtle radial glow */}
       <div
         aria-hidden
