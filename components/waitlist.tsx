@@ -148,15 +148,24 @@ export default function Waitlist() {
                 Role / context{" "}
                 <span className="opacity-50 font-normal">(optional)</span>
               </label>
-              <input
+              <select
                 id="wl-role"
-                type="text"
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
-                placeholder="Founder, student, PM…"
                 aria-label="Your role or context"
-                className="px-4 py-3 rounded-xl border border-border bg-card font-mono text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 transition-shadow"
-              />
+                className="px-4 py-3 rounded-xl border border-border bg-card font-mono text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/50 transition-shadow appearance-none"
+              >
+                <option value="" disabled>Select your role…</option>
+                <option value="Founder">Founder</option>
+                <option value="Student">Student</option>
+                <option value="Product Manager">Product Manager</option>
+                <option value="Engineer">Engineer</option>
+                <option value="Designer">Designer</option>
+                <option value="Sales">Sales</option>
+                <option value="Marketing">Marketing</option>
+                <option value="Researcher">Researcher</option>
+                <option value="Other">Other</option>
+              </select>
             </div>
 
             {/* Intent — optional */}
